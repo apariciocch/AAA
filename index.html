@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluador de Asperger en Adultos (AAA)</title>
+<style>
+  :root {
+    --bg: #f4f6fb; --card: #ffffff; --ink: #1f2937; --muted: #6b7280;
+    --brand: #4f46e5; --brand-dark: #3730a3; --ok: #059669; --bad: #dc2626;
+    --line: #e5e7eb; --warn-bg: #fef3c7; --warn-ink: #92400e;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.5;
+  }
+  header {
+    background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+    color: #fff; padding: 28px 16px; text-align: center;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.5rem; }
+  header p { margin: 0; opacity: .9; font-size: .95rem; }
+  main { max-width: 880px; margin: 0 auto; padding: 16px; }
+  .card {
+    background: var(--card); border-radius: 12px; padding: 20px;
+    margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .card h2 { margin-top: 0; font-size: 1.15rem; }
+  .muted { color: var(--muted); font-size: .92rem; }
+  .warn {
+    background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px;
+    padding: 12px 14px; font-size: .92rem; margin-top: 12px;
+  }
+  .progress {
+    position: sticky; top: 0; z-index: 5; background: var(--card);
+    padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  }
+  .bar { height: 10px; background: var(--line); border-radius: 6px; overflow: hidden; }
+  .bar > div { height: 100%; width: 0; background: var(--brand); transition: width .3s; }
+  .progress small { color: var(--muted); display: block; margin-top: 6px; }
+  fieldset {
+    background: var(--card); border: none; border-radius: 12px; padding: 16px 20px;
+    margin: 0 0 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  legend { font-weight: 700; color: var(--brand); padding: 0 6px; font-size: 1rem; }
+  .q {
+    display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    padding: 12px 0; border-top: 1px solid var(--line); flex-wrap: wrap;
+  }
+  .q.missing { background: #fff1f2; border-radius: 8px; padding-left: 8px; padding-right: 8px; }
+  .q p { margin: 0; flex: 1 1 360px; font-size: .96rem; }
+  .opts { display: flex; gap: 8px; }
+  .opts label {
+    cursor: pointer; border: 2px solid var(--line); border-radius: 8px;
+    padding: 6px 16px; font-weight: 600; user-select: none; min-width: 64px; text-align: center;
+  }
+  .opts input { position: absolute; opacity: 0; pointer-events: none; }
+  .opts label:has(input:checked) { border-color: var(--brand); background: #eef2ff; color: var(--brand-dark); }
+  .opts label:focus-within { outline: 2px solid var(--brand); outline-offset: 2px; }
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; margin: 8px 0 24px; }
+  button {
+    font: inherit; font-weight: 600; border: none; border-radius: 8px;
+    padding: 10px 20px; cursor: pointer;
+  }
+  .btn-primary { background: var(--brand); color: #fff; }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-ghost { background: #e5e7eb; color: var(--ink); }
+  .btn-ghost:hover { background: #d1d5db; }
+  .error { color: var(--bad); font-weight: 600; margin: 0; }
+  .grid-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 12px; }
+  .grid-inputs label { display: flex; flex-direction: column; font-size: .92rem; font-weight: 600; gap: 4px; }
+  .grid-inputs input {
+    font: inherit; padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 8px;
+  }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .95rem; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: .85rem; text-transform: uppercase; letter-spacing: .03em; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-weight: 700; font-size: .85rem; }
+  .badge.ok { background: #d1fae5; color: var(--ok); }
+  .badge.bad { background: #fee2e2; color: var(--bad); }
+  .verdict { font-size: 1.1rem; font-weight: 700; padding: 14px 16px; border-radius: 10px; margin: 0 0 12px; }
+  .verdict.ok { background: #d1fae5; color: #065f46; }
+  .verdict.bad { background: #fee2e2; color: #991b1b; }
+  .hidden { display: none !important; }
+  @media print {
+    header, .progress, .actions, #intro, .grid-inputs { display: none !important; }
+    fieldset { box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Evaluador de Asperger en Adultos (AAA)</h1>
+  <p>Cuestionario de cribado basado en Baron-Cohen et al. (2005)</p>
+</header>
+
+<main>
+
+  <section class="card" id="intro">
+    <h2>Antes de comenzar</h2>
+    <p class="muted">
+      El cuestionario tiene 23 preguntas agrupadas en 5 secciones: A (interacción social, máx. 5),
+      B (intereses y conductas restringidas, máx. 5), C (comunicación, máx. 5), D (imaginación, máx. 3)
+      y E (prerrequisitos, 5). Responda <strong>SÍ</strong> o <strong>NO</strong> a cada pregunta.
+    </p>
+    <p class="muted">
+      <strong>Criterios de referencia:</strong> al menos 3 síntomas en A, B y C; al menos 1 en D;
+      y los 5 prerrequisitos de E cumplidos.
+    </p>
+    <div class="warn">
+      Esta herramienta es solo un cribado orientativo. No sustituye una evaluación clínica completa
+      realizada por un profesional. Los resultados no constituyen un diagnóstico.
+    </div>
+  </section>
+
+  <div class="progress" id="progress">
+    <div class="bar"><div id="bar-fill"></div></div>
+    <small id="progress-text">0 de 23 preguntas respondidas</small>
+  </div>
+
+  <form id="form" novalidate></form>
+
+  <div class="card">
+    <h2>Cocientes complementarios (opcional)</h2>
+    <p class="muted">
+      La interpretación recomienda considerar también el Cociente de Espectro Autista (AQ), que debe ser
+      superior a 32, y el Cociente de Empatía (EQ), que debe ser inferior a 32. Puede ingresar estos valores
+      para incluirlos en el resultado.
+    </p>
+    <div class="grid-inputs">
+      <label>AQ (Cociente de Espectro Autista)
+        <input type="number" id="aq" min="0" max="50" step="1" placeholder="0 – 50">
+      </label>
+      <label>EQ (Cociente de Empatía)
+        <input type="number" id="eq" min="0" max="80" step="1" placeholder="0 – 80">
+      </label>
+    </div>
+  </div>
+
+  <p class="error hidden" id="error"></p>
+
+  <div class="actions">
+    <button type="button" class="btn-ghost" id="btn-reset">Limpiar respuestas</button>
+    <button type="button" class="btn-primary" id="btn-submit">Ver resultado</button>
+  </div>
+
+  <section class="card hidden" id="results" aria-live="polite">
+    <h2>Resultado</h2>
+    <div id="verdict" class="verdict"></div>
+    <table>
+      <thead>
+        <tr><th>Sección</th><th>Síntomas / cumplidos</th><th>Requerido</th><th>Estado</th></tr>
+      </thead>
+      <tbody id="results-body"></tbody>
+    </table>
+    <p class="muted" id="total-line"></p>
+    <div id="cq-results"></div>
+    <div class="warn">
+      Recuerde que el cribado no es un diagnóstico. Para una valoración, consulte con un profesional
+      especializado en el desarrollo y evaluación del espectro autista.
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-ghost" id="btn-edit">Volver a revisar</button>
+      <button type="button" class="btn-primary" id="btn-restart">Nueva evaluación</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  // ---------- Datos del cuestionario (AAA) ----------
+  const SECCIONES = [
+    {
+      id: "A",
+      titulo: "Déficit cualitativo en interacción social",
+      requerido: 3,
+      tipo: "sintomas",
+      items: [
+        "Marcado déficit en el empleo de múltiples conductas no verbales como contacto ocular, expresión facial, posturas corporales y gestos que regulen la interacción social.",
+        "Falla para establecer relaciones con pares apropiadas para su nivel de desarrollo.",
+        "Falta de interés en agradar a los demás. Falta de interés en comunicar sus experiencias a otros. No busca espontáneamente a las otras personas para compartir diversión, intereses. No muestra, comparte o señala objetos de su interés.",
+        "Falta de reciprocidad social o emocional (por ejemplo, no saber cómo consolar a alguien o falta de empatía).",
+        "Dificultad en comprender situaciones sociales. Dificultad en comprender los pensamientos y sentimientos de las otras personas."
+      ]
+    },
+    {
+      id: "B",
+      titulo: "Patrones de comportamiento, intereses y actividades restringidos, repetitivos y estereotipados",
+      requerido: 3,
+      tipo: "sintomas",
+      items: [
+        "Presenta preocupaciones con uno o más intereses estereotipados y restringidos anormales en intensidad o enfoque.",
+        "Adherencia aparentemente inflexible a rituales y rutinas específicas, no funcionales.",
+        "Manierismos motores estereotipados y repetitivos (por ejemplo, aleteo de manos o dedos).",
+        "Preocupación persistente sobre objetos o sistemas.",
+        "Tendencia a pensar en todo o nada (por ejemplo, política o moral) en lugar de aceptar con flexibilidad otros puntos de vista."
+      ]
+    },
+    {
+      id: "C",
+      titulo: "Déficit cualitativo en la comunicación verbal y no verbal",
+      requerido: 3,
+      tipo: "sintomas",
+      items: [
+        "Tendencia a llevar cualquier conversación hacia sí mismo o temas de interés.",
+        "Marcada dificultad para iniciar o sostener una conversación. No comprende el contacto social de tipo superficial con otros, pasar un rato con otras personas sin que haya una discusión, debate o actividad. No comprende las sutilezas.",
+        "Habla pedante incluyendo demasiadas o pocas palabras.",
+        "Falta de habilidad para reconocer aburrimiento o falta de interés del interlocutor. Incluso sabe que no debe hablar demasiado de su tema de interés, pero esta dificultad se presenta si su tema aparece.",
+        "Tendencia frecuente a decir cosas sin considerar el posible impacto emocional en el otro (\"faux pas\")."
+      ]
+    },
+    {
+      id: "D",
+      titulo: "Déficit en imaginación",
+      requerido: 1,
+      tipo: "sintomas",
+      items: [
+        "Juego simbólico sin la variación o espontaneidad según la edad del desarrollo.",
+        "Falta de habilidad para contar, escribir o crear espontáneamente una ficción sin copiar la historia.",
+        "El interés en la ficción (libro o drama) se restringe a posibles hechos de la realidad (por ejemplo, ciencia ficción, historia, aspectos técnicos de la película)."
+      ]
+    },
+    {
+      id: "E",
+      titulo: "Prerrequisitos",
+      requerido: 5,
+      tipo: "prerrequisitos",
+      items: [
+        "Retraso o funcionamiento anormal en cada una de las secciones anteriores (A-D) durante todo su desarrollo.",
+        "El trastorno causa déficits clínicamente significativos en el área social, laboral y otras áreas de funcionamiento importantes.",
+        "No ha presentado retraso general del lenguaje clínicamente significativo (por ejemplo, palabras sueltas a los 2 años, frases comunicativas a los 3 años).",
+        "No ha presentado retraso clínicamente significativo del desarrollo cognitivo, en la adquisición de las habilidades que le permiten valerse por sí mismo adecuadas a la edad, de la conducta adaptativa (que no sea en interacción social o habilidades relacionadas con interacción social, por ejemplo, higiene personal).",
+        "Los criterios no cumplen con otros trastornos generalizados del desarrollo o esquizofrenia."
+      ]
+    }
+  ];
+
+  const TOTAL_PREGUNTAS = SECCIONES.reduce((n, s) => n + s.items.length, 0); // 23
+
+  // ---------- Elementos ----------
+  const form = document.getElementById("form");
+  const barFill = document.getElementById("bar-fill");
+  const progressText = document.getElementById("progress-text");
+  const errorEl = document.getElementById("error");
+  const resultsEl = document.getElementById("results");
+
+  // ---------- Construcción del formulario ----------
+  function construirFormulario() {
+    form.innerHTML = "";
+    SECCIONES.forEach(seccion => {
+      const fs = document.createElement("fieldset");
+      fs.id = "sec-" + seccion.id;
+
+      const legend = document.createElement("legend");
+      const req = seccion.tipo === "prerrequisitos"
+        ? "se requieren los 5"
+        : `mín. ${seccion.requerido} de ${seccion.items.length}`;
+      legend.textContent = `${seccion.id}. ${seccion.titulo} (${req})`;
+      fs.appendChild(legend);
+
+      seccion.items.forEach((texto, i) => {
+        const name = seccion.id + (i + 1);
+        const fila = document.createElement("div");
+        fila.className = "q";
+        fila.dataset.name = name;
+
+        const p = document.createElement("p");
+        p.textContent = `${i + 1}. ${texto}`;
+
+        const opts = document.createElement("div");
+        opts.className = "opts";
+
+        [["si", "SÍ"], ["no", "NO"]].forEach(([valor, etiqueta]) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = name;
+          input.value = valor;
+          input.addEventListener("change", () => {
+            fila.classList.remove("missing");
+            errorEl.classList.add("hidden");
+            actualizarProgreso();
+          });
+          label.append(input, document.createTextNode(etiqueta));
+          opts.appendChild(label);
+        });
+
+        fila.append(p, opts);
+        fs.appendChild(fila);
+      });
+
+      form.appendChild(fs);
+    });
+  }
+
+  // ---------- Lectura de respuestas ----------
+  function respuestas() {
+    const mapa = {};
+    SECCIONES.forEach(s => s.items.forEach((_, i) => {
+      const name = s.id + (i + 1);
+      const sel = form.querySelector(`input[name="${name}"]:checked`);
+      mapa[name] = sel ? sel.value : null;
+    }));
+    return mapa;
+  }
+
+  function actualizarProgreso() {
+    const r = respuestas();
+    const contestadas = Object.values(r).filter(v => v !== null).length;
+    barFill.style.width = (contestadas / TOTAL_PREGUNTAS * 100) + "%";
+    progressText.textContent = `${contestadas} de ${TOTAL_PREGUNTAS} preguntas respondidas`;
+  }
+
+  // ---------- Evaluación ----------
+  function evaluar() {
+    const r = respuestas();
+
+    // Validar que todas estén contestadas
+    const sinResponder = Object.keys(r).filter(k => r[k] === null);
+    if (sinResponder.length > 0) {
+      sinResponder.forEach(k => {
+        const fila = form.querySelector(`.q[data-name="${k}"]`);
+        if (fila) fila.classList.add("missing");
+      });
+      errorEl.textContent = `Faltan ${sinResponder.length} pregunta(s) por responder. Revise las marcadas en rojo.`;
+      errorEl.classList.remove("hidden");
+      const primera = form.querySelector(`.q[data-name="${sinResponder[0]}"]`);
+      if (primera) primera.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    errorEl.classList.add("hidden");
+
+    // Cálculo por sección
+    const filas = SECCIONES.map(s => {
+      const cumplidos = s.items.filter((_, i) => r[s.id + (i + 1)] === "si").length;
+      const cumple = cumplidos >= s.requerido;
+      return { seccion: s, cumplidos, cumple };
+    });
+
+    const todoCumple = filas.every(f => f.cumple);
+
+    // Cocientes complementarios (opcionales)
+    const aqRaw = document.getElementById("aq").value;
+    const eqRaw = document.getElementById("eq").value;
+    const aq = aqRaw === "" ? null : parseFloat(aqRaw);
+    const eq = eqRaw === "" ? null : parseFloat(eqRaw);
+
+    mostrarResultados(filas, todoCumple, aq, eq);
+  }
+
+  function mostrarResultados(filas, todoCumple, aq, eq) {
+    // Veredicto
+    const verdict = document.getElementById("verdict");
+    verdict.className = "verdict " + (todoCumple ? "ok" : "bad");
+    verdict.textContent = todoCumple
+      ? "Las respuestas cumplen los criterios de la herramienta (cribado positivo)."
+      : "Las respuestas no cumplen todos los criterios de la herramienta (cribado negativo).";
+
+    // Tabla
+    const cuerpo = document.getElementById("results-body");
+    cuerpo.innerHTML = "";
+    filas.forEach(f => {
+      const tr = document.createElement("tr");
+      const esPrereq = f.seccion.tipo === "prerrequisitos";
+      const tdSec = document.createElement("td");
+      tdSec.textContent = `${f.seccion.id}. ${f.seccion.titulo}`;
+      const tdVal = document.createElement("td");
+      tdVal.textContent = `${f.cumplidos} de ${f.seccion.items.length}`;
+      const tdReq = document.createElement("td");
+      tdReq.textContent = esPrereq ? "5 de 5" : `≥ ${f.seccion.requerido}`;
+      const tdEst = document.createElement("td");
+      const badge = document.createElement("span");
+      badge.className = "badge " + (f.cumple ? "ok" : "bad");
+      badge.textContent = f.cumple ? "Cumple" : "No cumple";
+      tdEst.appendChild(badge);
+      tr.append(tdSec, tdVal, tdReq, tdEst);
+      cuerpo.appendChild(tr);
+    });
+
+    // Total de síntomas (A–D)
+    const sintomas = filas.filter(f => f.seccion.tipo === "sintomas");
+    const totalCumplidos = sintomas.reduce((n, f) => n + f.cumplidos, 0);
+    const totalMax = sintomas.reduce((n, f) => n + f.seccion.items.length, 0);
+    document.getElementById("total-line").textContent =
+      `Síntomas totales (A–D): ${totalCumplidos} de ${totalMax}. Referencia del instrumento: al menos 10 en total, con los mínimos por sección.`;
+
+    // Cocientes complementarios
+    const cq = document.getElementById("cq-results");
+    cq.innerHTML = "";
+    if (aq !== null || eq !== null) {
+      const lista = document.createElement("div");
+      lista.className = "muted";
+      const lineas = [];
+      if (aq !== null && !isNaN(aq)) {
+        lineas.push(`AQ = ${aq}: ${aq > 32 ? "superior a 32 (cumple)" : "no superior a 32 (no cumple)"}.`);
+      }
+      if (eq !== null && !isNaN(eq)) {
+        lineas.push(`EQ = ${eq}: ${eq < 32 ? "inferior a 32 (cumple)" : "no inferior a 32 (no cumple)"}.`);
+      }
+      lineas.forEach(t => {
+        const p = document.createElement("p");
+        p.textContent = t;
+        p.style.margin = "4px 0";
+        lista.appendChild(p);
+      });
+      cq.appendChild(lista);
+    }
+
+    // Mostrar bloque de resultados
+    resultsEl.classList.remove("hidden");
+    form.classList.add("hidden");
+    document.getElementById("intro").classList.add("hidden");
+    document.getElementById("progress").classList.add("hidden");
+    document.querySelectorAll(".card:not(#results)").forEach(c => {
+      if (c.querySelector("#aq")) c.classList.add("hidden");
+    });
+    document.getElementById("btn-submit").classList.add("hidden");
+    document.getElementById("btn-reset").classList.add("hidden");
+    resultsEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function volverARevisar() {
+    resultsEl.classList.add("hidden");
+    form.classList.remove("hidden");
+    document.getElementById("intro").classList.remove("hidden");
+    document.getElementById("progress").classList.remove("hidden");
+    document.querySelectorAll(".card:not(#results)").forEach(c => {
+      if (c.querySelector("#aq")) c.classList.remove("hidden");
+    });
+    document.getElementById("btn-submit").classList.remove("hidden");
+    document.getElementById("btn-reset").classList.remove("hidden");
+  }
+
+  function nuevaEvaluacion() {
+    form.querySelectorAll("input[type=radio]").forEach(i => i.checked = false);
+    form.querySelectorAll(".q.missing").forEach(q => q.classList.remove("missing"));
+    document.getElementById("aq").value = "";
+    document.getElementById("eq").value = "";
+    errorEl.classList.add("hidden");
+    volverARevisar();
+    actualizarProgreso();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ---------- Eventos ----------
+  document.getElementById("btn-submit").addEventListener("click", evaluar);
+  document.getElementById("btn-edit").addEventListener("click", volverARevisar);
+  document.getElementById("btn-restart").addEventListener("click", nuevaEvaluacion);
+  document.getElementById("btn-reset").addEventListener("click", () => {
+    if (!confirm("¿Borrar todas las respuestas?")) return;
+    form.querySelectorAll("input[type=radio]").forEach(i => i.checked = false);
+    form.querySelectorAll(".q.missing").forEach(q => q.classList.remove("missing"));
+    errorEl.classList.add("hidden");
+    actualizarProgreso();
+  });
+
+  // ---------- Inicio ----------
+  construirFormulario();
+  actualizarProgreso();
+</script>
+</body>
+</html>
